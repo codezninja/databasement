@@ -46,7 +46,9 @@ return new class extends Migration
         // 5. Drop recurrence column and make backup_schedule_id non-nullable
         Schema::table('backups', function (Blueprint $table) {
             $table->dropColumn('recurrence');
-            $table->ulid('backup_schedule_id')->nullable(false)->change();
+            $table->dropForeign(['backup_schedule_id']);
+            $table->ulid('backup_schedule_id')->nullable(false)->after('path')->change();
+            $table->foreign('backup_schedule_id')->references('id')->on('backup_schedules');
         });
 
         // 6. Remove daily_cron and weekly_cron from app_configs
@@ -72,8 +74,8 @@ return new class extends Migration
         }
 
         // Re-insert AppConfig rows
-        $dailyCron = $dailySchedule->expression ?? '0 2 * * *';
-        $weeklyCron = $weeklySchedule->expression ?? '0 3 * * 0';
+        $dailyCron = $dailySchedule?->expression ?? '0 2 * * *';
+        $weeklyCron = $weeklySchedule?->expression ?? '0 3 * * 0';
 
         DB::table('app_configs')->insert([
             ['id' => 'backup.daily_cron', 'value' => $dailyCron, 'type' => 'string', 'is_sensitive' => false, 'created_at' => now(), 'updated_at' => now()],

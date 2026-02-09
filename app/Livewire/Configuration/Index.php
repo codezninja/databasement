@@ -159,10 +159,10 @@ class Index extends Component
             ? "unique:backup_schedules,name,{$this->editingScheduleId}"
             : 'unique:backup_schedules,name';
 
-        $this->form->validate(array_merge_recursive(
-            $this->form->scheduleRules(),
-            ['schedule_name' => [$uniqueRule]],
-        ));
+        $rules = $this->form->scheduleRules();
+        $rules['schedule_name'][] = $uniqueRule;
+
+        $this->form->validate($rules);
 
         if ($this->editingScheduleId) {
             $schedule = BackupSchedule::findOrFail($this->editingScheduleId);
@@ -250,6 +250,15 @@ class Index extends Component
     }
 
     /**
+     * @return \Illuminate\Database\Eloquent\Collection<int, BackupSchedule>
+     */
+    #[Computed]
+    public function backupSchedules(): \Illuminate\Database\Eloquent\Collection
+    {
+        return BackupSchedule::withCount('backups')->orderBy('name')->get();
+    }
+
+    /**
      * @return array<int, array{id: string, name: string}>
      */
     public function getCompressionOptions(): array
@@ -300,7 +309,7 @@ class Index extends Component
             'ssoConfig' => $this->getSsoConfig(),
             'compressionOptions' => $this->getCompressionOptions(),
             'channelOptions' => $this->getChannelOptions(),
-            'backupSchedules' => BackupSchedule::withCount('backups')->orderBy('name')->get(),
+            'backupSchedules' => $this->backupSchedules(),
         ]);
     }
 }

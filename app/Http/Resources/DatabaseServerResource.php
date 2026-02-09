@@ -32,6 +32,13 @@ class DatabaseServerResource extends JsonResource
             'backup' => $this->whenLoaded('backup', fn () => [
                 'id' => $this->backup->id,
                 'backup_schedule_id' => $this->backup->backup_schedule_id,
+                'backup_schedule' => $this->backup->relationLoaded('backupSchedule')
+                    ? [
+                        'id' => $this->backup->backupSchedule->id,
+                        'name' => $this->backup->backupSchedule->name,
+                        'expression' => $this->backup->backupSchedule->expression,
+                    ]
+                    : null,
                 'volume_id' => $this->backup->volume_id,
             ]),
         ];

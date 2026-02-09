@@ -2,8 +2,10 @@
 
 use App\Facades\AppConfig;
 use App\Models\BackupSchedule;
+use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schedule;
 
 Artisan::command('inspire', function () {
@@ -16,7 +18,7 @@ try {
         Schedule::command('backups:run', [$backupSchedule->id])
             ->cron($backupSchedule->expression);
     }
-} catch (\Throwable) {
+} catch (QueryException) {
     // Table may not exist yet (pre-migration)
 }
 

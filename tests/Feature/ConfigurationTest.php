@@ -396,8 +396,6 @@ test('cannot delete a backup schedule that is in use', function () {
 });
 
 test('schedule name must be unique', function () {
-    BackupSchedule::firstOrCreate(['name' => 'Daily'], ['expression' => '0 2 * * *']);
-
     Livewire::actingAs(User::factory()->create(['role' => 'admin']))
         ->test(Index::class)
         ->call('openScheduleModal')

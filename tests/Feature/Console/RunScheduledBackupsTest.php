@@ -42,7 +42,7 @@ test('dispatches backup jobs for a schedule', function () {
 test('dispatches multiple backup jobs for multiple servers on same schedule', function () {
     Queue::fake();
 
-    $schedule = BackupSchedule::firstOrCreate(['name' => 'Daily'], ['expression' => '0 2 * * *']);
+    $schedule = dailySchedule();
 
     $server1 = DatabaseServer::factory()->create(['name' => 'Server 1', 'database_names' => ['db1']]);
     $server1->backup->update(['backup_schedule_id' => $schedule->id]);
@@ -60,8 +60,8 @@ test('dispatches multiple backup jobs for multiple servers on same schedule', fu
 test('only runs backups matching the given schedule', function () {
     Queue::fake();
 
-    $dailySchedule = BackupSchedule::firstOrCreate(['name' => 'Daily'], ['expression' => '0 2 * * *']);
-    $weeklySchedule = BackupSchedule::firstOrCreate(['name' => 'Weekly'], ['expression' => '0 3 * * 0']);
+    $dailySchedule = dailySchedule();
+    $weeklySchedule = weeklySchedule();
 
     $dailyServer = DatabaseServer::factory()->create(['database_names' => ['daily_db']]);
     $dailyServer->backup->update(['backup_schedule_id' => $dailySchedule->id]);
@@ -94,7 +94,7 @@ test('dispatches multiple jobs for server with multiple databases', function () 
 test('skips disabled backups', function () {
     Queue::fake();
 
-    $schedule = BackupSchedule::firstOrCreate(['name' => 'Daily'], ['expression' => '0 2 * * *']);
+    $schedule = dailySchedule();
 
     $enabledServer = DatabaseServer::factory()->create(['name' => 'Enabled Server', 'database_names' => ['db1'], 'backups_enabled' => true]);
     $enabledServer->backup->update(['backup_schedule_id' => $schedule->id]);

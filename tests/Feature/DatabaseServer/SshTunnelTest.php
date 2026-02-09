@@ -2,7 +2,6 @@
 
 use App\Livewire\DatabaseServer\Create;
 use App\Livewire\DatabaseServer\Edit;
-use App\Models\BackupSchedule;
 use App\Models\DatabaseServer;
 use App\Models\DatabaseServerSshConfig;
 use App\Models\User;
@@ -11,13 +10,6 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
 
 uses(RefreshDatabase::class);
-
-beforeEach(function () {
-    $this->schedule = BackupSchedule::firstOrCreate(
-        ['name' => 'Daily'],
-        ['expression' => '0 2 * * *'],
-    );
-});
 
 test('can create database server with SSH tunnel (password auth)', function () {
     $user = User::factory()->create();
@@ -37,7 +29,7 @@ test('can create database server with SSH tunnel (password auth)', function () {
         ->set('form.password', 'secret123')
         ->set('form.database_names_input', 'myapp_production')
         ->set('form.volume_id', $volume->id)
-        ->set('form.backup_schedule_id', $this->schedule->id)
+        ->set('form.backup_schedule_id', dailySchedule()->id)
         ->set('form.retention_days', 14)
         // SSH tunnel config
         ->set('form.ssh_enabled', true)
@@ -87,7 +79,7 @@ test('can create database server with SSH tunnel (key auth)', function () {
         ->set('form.password', 'secret123')
         ->set('form.database_names_input', 'myapp_production')
         ->set('form.volume_id', $volume->id)
-        ->set('form.backup_schedule_id', $this->schedule->id)
+        ->set('form.backup_schedule_id', dailySchedule()->id)
         ->set('form.retention_days', 14)
         // SSH tunnel config
         ->set('form.ssh_enabled', true)
@@ -134,7 +126,7 @@ test('can create database server using existing SSH config', function () {
         ->set('form.password', 'secret123')
         ->set('form.database_names_input', 'myapp_production')
         ->set('form.volume_id', $volume->id)
-        ->set('form.backup_schedule_id', $this->schedule->id)
+        ->set('form.backup_schedule_id', dailySchedule()->id)
         ->set('form.retention_days', 14)
         // Use existing SSH config
         ->set('form.ssh_enabled', true)

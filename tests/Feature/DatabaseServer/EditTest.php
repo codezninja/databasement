@@ -2,7 +2,6 @@
 
 use App\Livewire\DatabaseServer\Edit;
 use App\Models\Backup;
-use App\Models\BackupSchedule;
 use App\Models\DatabaseServer;
 use App\Models\Snapshot;
 use App\Models\User;
@@ -16,10 +15,7 @@ test('can edit database server', function (array $config) {
         'type' => 'local',
         'config' => ['path' => '/var/backups'],
     ]);
-    $schedule = BackupSchedule::firstOrCreate(
-        ['name' => 'Daily'],
-        ['expression' => '0 2 * * *'],
-    );
+    $schedule = dailySchedule();
 
     $serverData = [
         'name' => $config['name'],
@@ -89,10 +85,7 @@ test('can change retention policy', function (array $config) {
         'type' => 'local',
         'config' => ['path' => '/var/backups'],
     ]);
-    $schedule = BackupSchedule::firstOrCreate(
-        ['name' => 'Daily'],
-        ['expression' => '0 2 * * *'],
-    );
+    $schedule = dailySchedule();
 
     $server = DatabaseServer::create([
         'name' => 'Test Server',
