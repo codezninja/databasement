@@ -2,6 +2,7 @@
 
 use App\Facades\AppConfig;
 use App\Models\Backup;
+use App\Models\BackupSchedule;
 use App\Models\DatabaseServer;
 use App\Models\DatabaseServerSshConfig;
 use App\Models\Snapshot;
@@ -71,7 +72,7 @@ function createDatabaseServer(array $attributes, string $volumeType = 'local'): 
 
     // Now create the backup with both volume_id and database_server_id
     $backup = Backup::create([
-        'recurrence' => 'daily',
+        'backup_schedule_id' => BackupSchedule::firstOrCreate(['name' => 'Daily'], ['expression' => '0 2 * * *'])->id,
         'volume_id' => $volume->id,
         'database_server_id' => $databaseServer->id,
     ]);

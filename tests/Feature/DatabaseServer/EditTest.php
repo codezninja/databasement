@@ -2,6 +2,7 @@
 
 use App\Livewire\DatabaseServer\Edit;
 use App\Models\Backup;
+use App\Models\BackupSchedule;
 use App\Models\DatabaseServer;
 use App\Models\Snapshot;
 use App\Models\User;
@@ -15,6 +16,10 @@ test('can edit database server', function (array $config) {
         'type' => 'local',
         'config' => ['path' => '/var/backups'],
     ]);
+    $schedule = BackupSchedule::firstOrCreate(
+        ['name' => 'Daily'],
+        ['expression' => '0 2 * * *'],
+    );
 
     $serverData = [
         'name' => $config['name'],
@@ -35,7 +40,7 @@ test('can edit database server', function (array $config) {
     Backup::create([
         'database_server_id' => $server->id,
         'volume_id' => $volume->id,
-        'recurrence' => 'daily',
+        'backup_schedule_id' => $schedule->id,
         'retention_days' => 7,
     ]);
 
@@ -84,6 +89,10 @@ test('can change retention policy', function (array $config) {
         'type' => 'local',
         'config' => ['path' => '/var/backups'],
     ]);
+    $schedule = BackupSchedule::firstOrCreate(
+        ['name' => 'Daily'],
+        ['expression' => '0 2 * * *'],
+    );
 
     $server = DatabaseServer::create([
         'name' => 'Test Server',
@@ -99,7 +108,7 @@ test('can change retention policy', function (array $config) {
     Backup::create([
         'database_server_id' => $server->id,
         'volume_id' => $volume->id,
-        'recurrence' => 'daily',
+        'backup_schedule_id' => $schedule->id,
         'retention_policy' => Backup::RETENTION_FOREVER,
         'retention_days' => null,
     ]);

@@ -31,7 +31,7 @@ class DatabaseServerResource extends JsonResource
             'updated_at' => $this->updated_at,
             'backup' => $this->whenLoaded('backup', fn () => [
                 'id' => $this->backup->id,
-                'recurrence' => $this->backup->recurrence,
+                'backup_schedule_id' => $this->backup->backup_schedule_id,
                 'volume_id' => $this->backup->volume_id,
             ]),
         ];

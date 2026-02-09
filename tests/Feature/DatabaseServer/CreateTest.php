@@ -1,10 +1,18 @@
 <?php
 
 use App\Livewire\DatabaseServer\Create;
+use App\Models\BackupSchedule;
 use App\Models\DatabaseServer;
 use App\Models\User;
 use App\Models\Volume;
 use Livewire\Livewire;
+
+beforeEach(function () {
+    $this->schedule = BackupSchedule::firstOrCreate(
+        ['name' => 'Daily'],
+        ['expression' => '0 2 * * *'],
+    );
+});
 
 test('can create database server', function (array $config) {
     $user = User::factory()->create();
@@ -20,7 +28,7 @@ test('can create database server', function (array $config) {
         ->set('form.database_type', $config['type'])
         ->set('form.description', 'Test database')
         ->set('form.volume_id', $volume->id)
-        ->set('form.recurrence', 'daily')
+        ->set('form.backup_schedule_id', $this->schedule->id)
         ->set('form.retention_days', 14);
 
     // Set type-specific fields
@@ -58,7 +66,7 @@ test('can create database server', function (array $config) {
     $this->assertDatabaseHas('backups', [
         'database_server_id' => $server->id,
         'volume_id' => $volume->id,
-        'recurrence' => 'daily',
+        'backup_schedule_id' => $this->schedule->id,
         'retention_days' => 14,
     ]);
 })->with('database server configs');
@@ -111,7 +119,7 @@ test('can create database server with retention policy', function (array $config
         ->set('form.password', 'secret123')
         ->set('form.database_names_input', 'myapp_production')
         ->set('form.volume_id', $volume->id)
-        ->set('form.recurrence', 'daily')
+        ->set('form.backup_schedule_id', $this->schedule->id)
         ->set('form.retention_policy', $config['policy']);
 
     // Set policy-specific fields
@@ -149,7 +157,7 @@ test('cannot create database server with GFS retention when all tiers are empty'
         ->set('form.password', 'secret123')
         ->set('form.database_names_input', 'myapp_production')
         ->set('form.volume_id', $volume->id)
-        ->set('form.recurrence', 'daily')
+        ->set('form.backup_schedule_id', $this->schedule->id)
         ->set('form.retention_policy', 'gfs')
         ->set('form.gfs_keep_daily', null)
         ->set('form.gfs_keep_weekly', null)

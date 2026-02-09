@@ -23,8 +23,6 @@ class AppConfigService
         'backup.job_timeout' => 7200,
         'backup.job_tries' => 3,
         'backup.job_backoff' => 60,
-        'backup.daily_cron' => '0 2 * * *',
-        'backup.weekly_cron' => '0 3 * * 0',
         'backup.cleanup_cron' => '0 4 * * *',
         'backup.verify_files' => true,
         'backup.verify_files_cron' => '0 5 * * *',

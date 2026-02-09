@@ -3,6 +3,7 @@
 namespace App\Livewire\Configuration;
 
 use App\Livewire\Forms\ConfigurationForm;
+use App\Models\BackupSchedule;
 use App\Models\DatabaseServer;
 use App\Models\Snapshot;
 use App\Services\FailureNotificationService;
@@ -22,6 +23,14 @@ class Index extends Component
     use Toast;
 
     public ConfigurationForm $form;
+
+    public bool $showScheduleModal = false;
+
+    public ?string $editingScheduleId = null;
+
+    public ?string $deleteScheduleId = null;
+
+    public bool $showDeleteScheduleModal = false;
 
     public function mount(): void
     {
@@ -129,6 +138,86 @@ class Index extends Component
         $this->success(__('Notification configuration saved.'), position: 'toast-bottom');
     }
 
+    public function openScheduleModal(?string $scheduleId = null): void
+    {
+        $this->editingScheduleId = $scheduleId;
+        $this->form->resetScheduleFields();
+
+        if ($scheduleId) {
+            $schedule = BackupSchedule::findOrFail($scheduleId);
+            $this->form->schedule_name = $schedule->name;
+            $this->form->schedule_expression = $schedule->expression;
+        }
+
+        $this->showScheduleModal = true;
+    }
+
+    public function saveSchedule(): void
+    {
+        abort_unless(auth()->user()->isAdmin(), Response::HTTP_FORBIDDEN);
+
+        $uniqueRule = $this->editingScheduleId
+            ? "unique:backup_schedules,name,{$this->editingScheduleId}"
+            : 'unique:backup_schedules,name';
+
+        $this->form->validate(array_merge_recursive(
+            $this->form->scheduleRules(),
+            ['schedule_name' => [$uniqueRule]],
+        ));
+
+        if ($this->editingScheduleId) {
+            $schedule = BackupSchedule::findOrFail($this->editingScheduleId);
+            $schedule->update([
+                'name' => $this->form->schedule_name,
+                'expression' => $this->form->schedule_expression,
+            ]);
+        } else {
+            BackupSchedule::create([
+                'name' => $this->form->schedule_name,
+                'expression' => $this->form->schedule_expression,
+            ]);
+        }
+
+        $this->showScheduleModal = false;
+        $this->editingScheduleId = null;
+        $this->form->resetScheduleFields();
+        $this->restartScheduler();
+
+        $this->success(__('Backup schedule saved.'), position: 'toast-bottom');
+    }
+
+    public function confirmDeleteSchedule(string $scheduleId): void
+    {
+        $this->deleteScheduleId = $scheduleId;
+        $this->showDeleteScheduleModal = true;
+    }
+
+    public function deleteSchedule(): void
+    {
+        abort_unless(auth()->user()->isAdmin(), Response::HTTP_FORBIDDEN);
+
+        if (! $this->deleteScheduleId) {
+            return;
+        }
+
+        $schedule = BackupSchedule::withCount('backups')->findOrFail($this->deleteScheduleId);
+
+        if ($schedule->backups_count > 0) {
+            $this->error(__('Cannot delete a schedule that is in use by database servers.'), position: 'toast-bottom');
+            $this->showDeleteScheduleModal = false;
+            $this->deleteScheduleId = null;
+
+            return;
+        }
+
+        $schedule->delete();
+        $this->showDeleteScheduleModal = false;
+        $this->deleteScheduleId = null;
+        $this->restartScheduler();
+
+        $this->success(__('Backup schedule deleted.'), position: 'toast-bottom');
+    }
+
     public function sendTestNotification(): void
     {
         abort_unless(auth()->user()->isAdmin(), Response::HTTP_FORBIDDEN);
@@ -217,6 +306,7 @@ class Index extends Component
             'ssoConfig' => $this->getSsoConfig(),
             'compressionOptions' => $this->getCompressionOptions(),
             'channelOptions' => $this->getChannelOptions(),
+            'backupSchedules' => BackupSchedule::withCount('backups')->orderBy('name')->get(),
         ]);
     }
 }

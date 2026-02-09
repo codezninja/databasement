@@ -37,6 +37,56 @@
             @include('livewire.configuration._config-table', ['rows' => $appConfig])
         </x-card>
 
+        <!-- Backup Schedules -->
+        <x-card title="{{ __('Backup Schedules') }}" subtitle="{{ __('Define cron schedules that database servers can use for automated backups.') }}" shadow>
+            <div class="divide-y divide-base-200/80">
+                @foreach ($backupSchedules as $schedule)
+                    <div class="flex items-center justify-between py-3 px-1" wire:key="schedule-{{ $schedule->id }}">
+                        <div>
+                            <div class="font-medium">{{ $schedule->name }}</div>
+                            <div class="text-sm text-base-content/70">
+                                <code class="text-xs bg-base-200 px-1.5 py-0.5 rounded">{{ $schedule->expression }}</code>
+                                <span class="ml-2">{{ $this->translateCron($schedule->expression) }}</span>
+                            </div>
+                            @if ($schedule->backups_count > 0)
+                                <div class="text-xs text-base-content/50 mt-1">
+                                    {{ trans_choice(':count server|:count servers', $schedule->backups_count) }}
+                                </div>
+                            @endif
+                        </div>
+                        @if ($this->isAdmin)
+                            <div class="flex items-center gap-1">
+                                <x-button
+                                    icon="o-pencil-square"
+                                    class="btn-ghost btn-sm"
+                                    wire:click="openScheduleModal('{{ $schedule->id }}')"
+                                    tooltip-left="{{ __('Edit') }}"
+                                />
+                                <x-button
+                                    icon="o-trash"
+                                    class="btn-ghost btn-sm text-error"
+                                    wire:click="confirmDeleteSchedule('{{ $schedule->id }}')"
+                                    :disabled="$schedule->backups_count > 0"
+                                    tooltip-left="{{ $schedule->backups_count > 0 ? __('In use by servers') : __('Delete') }}"
+                                />
+                            </div>
+                        @endif
+                    </div>
+                @endforeach
+            </div>
+
+            @if ($this->isAdmin)
+                <div class="flex items-center justify-end border-t border-base-200/60 pt-4 mt-2">
+                    <x-button
+                        label="{{ __('Add Schedule') }}"
+                        icon="o-plus"
+                        class="btn-primary btn-sm"
+                        wire:click="openScheduleModal"
+                    />
+                </div>
+            @endif
+        </x-card>
+
         <!-- Backup Configuration (editable) -->
         <x-card title="{{ __('Backup') }}" subtitle="{{ __('Backup and restore operation settings.') }}" shadow>
             <x-slot:menu>
@@ -80,20 +130,6 @@
 
                     <x-config-row label="{{ __('Job Backoff') }}" description="{{ __('Number of seconds to wait before retrying a failed job.') }}">
                         <x-input wire:model.blur="form.job_backoff" type="number" min="0" max="3600" :disabled="!$this->isAdmin" />
-                    </x-config-row>
-
-                    <x-config-row label="{{ __('Daily Backup Cron') }}" description="{{ __('Cron expression that controls when daily backups run.') }}">
-                        <div>
-                            <x-input wire:model.blur="form.daily_cron" :disabled="!$this->isAdmin" />
-                            <div class="fieldset-label mt-1 text-xs">{{ $this->translateCron($form->daily_cron) }}</div>
-                        </div>
-                    </x-config-row>
-
-                    <x-config-row label="{{ __('Weekly Backup Cron') }}" description="{{ __('Cron expression that controls when weekly backups run.') }}">
-                        <div>
-                            <x-input wire:model.blur="form.weekly_cron" :disabled="!$this->isAdmin" />
-                            <div class="fieldset-label mt-1 text-xs">{{ $this->translateCron($form->weekly_cron) }}</div>
-                        </div>
                     </x-config-row>
 
                     <x-config-row label="{{ __('Cleanup Cron') }}" description="{{ __('Cron expression that controls when old snapshots are cleaned up.') }}">
@@ -255,4 +291,53 @@
             @include('livewire.configuration._config-table', ['rows' => $ssoConfig])
         </x-card>
     </div>
+
+    <!-- Add/Edit Schedule Modal -->
+    <x-modal wire:model="showScheduleModal" title="{{ $editingScheduleId ? __('Edit Schedule') : __('Add Schedule') }}">
+        <div class="space-y-4">
+            <x-input
+                wire:model="form.schedule_name"
+                label="{{ __('Name') }}"
+                placeholder="{{ __('e.g., Every 3 Hours') }}"
+                required
+            />
+
+            <div>
+                <x-input
+                    wire:model.blur="form.schedule_expression"
+                    label="{{ __('Cron Expression') }}"
+                    placeholder="{{ __('e.g., 0 */3 * * *') }}"
+                    required
+                />
+                @if ($form->schedule_expression)
+                    <div class="fieldset-label mt-1 text-xs">{{ $this->translateCron($form->schedule_expression) }}</div>
+                @endif
+            </div>
+        </div>
+
+        <x-slot:actions>
+            <x-button label="{{ __('Cancel') }}" @click="$wire.showScheduleModal = false" />
+            <x-button
+                class="btn-primary"
+                label="{{ __('Save') }}"
+                wire:click="saveSchedule"
+                spinner="saveSchedule"
+            />
+        </x-slot:actions>
+    </x-modal>
+
+    <!-- Delete Schedule Confirmation Modal -->
+    <x-modal wire:model="showDeleteScheduleModal" title="{{ __('Delete Schedule') }}">
+        <p>{{ __('Are you sure you want to delete this backup schedule? This action cannot be undone.') }}</p>
+
+        <x-slot:actions>
+            <x-button label="{{ __('Cancel') }}" @click="$wire.showDeleteScheduleModal = false" />
+            <x-button
+                class="btn-error"
+                label="{{ __('Delete') }}"
+                wire:click="deleteSchedule"
+                spinner="deleteSchedule"
+            />
+        </x-slot:actions>
+    </x-modal>
 </div>

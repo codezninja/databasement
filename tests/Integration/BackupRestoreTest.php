@@ -10,6 +10,7 @@
 use App\Enums\CompressionType;
 use App\Facades\AppConfig;
 use App\Models\Backup;
+use App\Models\BackupSchedule;
 use App\Services\Backup\BackupJobFactory;
 use App\Services\Backup\BackupTask;
 use App\Services\Backup\CompressorInterface;
@@ -150,10 +151,14 @@ test('sqlite backup and restore workflow', function () {
 
     // Create a target server for restore (different sqlite file)
     $targetServer = IntegrationTestHelpers::createSqliteDatabaseServer($restoredSqlitePath);
+    $schedule = BackupSchedule::firstOrCreate(
+        ['name' => 'Daily'],
+        ['expression' => '0 2 * * *'],
+    );
     Backup::create([
         'database_server_id' => $targetServer->id,
         'volume_id' => $this->volume->id,
-        'recurrence' => 'manual',
+        'backup_schedule_id' => $schedule->id,
     ]);
 
     // Run restore

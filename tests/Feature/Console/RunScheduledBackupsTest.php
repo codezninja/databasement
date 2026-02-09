@@ -1,30 +1,33 @@
 <?php
 
 use App\Jobs\ProcessBackupJob;
+use App\Models\BackupSchedule;
 use App\Models\DatabaseServer;
 use App\Models\Snapshot;
 use Illuminate\Support\Facades\Queue;
 
-test('fails with invalid recurrence type', function () {
-    $this->artisan('backups:run', ['recurrence' => 'monthly'])
-        ->expectsOutput("Invalid recurrence type: monthly. Must be 'daily' or 'weekly'.")
+test('fails with non-existent schedule ID', function () {
+    $this->artisan('backups:run', ['schedule' => 'non-existent-id'])
+        ->expectsOutput('Backup schedule not found: non-existent-id')
         ->assertExitCode(1);
 });
 
-test('returns success when no backups configured', function () {
-    $this->artisan('backups:run', ['recurrence' => 'daily'])
-        ->expectsOutput('No daily backups configured.')
+test('returns success when no backups configured for schedule', function () {
+    $schedule = BackupSchedule::factory()->create(['name' => 'Empty Schedule']);
+
+    $this->artisan('backups:run', ['schedule' => $schedule->id])
+        ->expectsOutput("No backups configured for schedule: {$schedule->name}.")
         ->assertExitCode(0);
 });
 
-test('dispatches backup jobs for daily backups', function () {
+test('dispatches backup jobs for a schedule', function () {
     Queue::fake();
 
     $server = DatabaseServer::factory()->create(['database_names' => ['production_db']]);
-    $server->backup->update(['recurrence' => 'daily']);
+    $schedule = $server->backup->backupSchedule;
 
-    $this->artisan('backups:run', ['recurrence' => 'daily'])
-        ->expectsOutput('Dispatching 1 daily backup(s)...')
+    $this->artisan('backups:run', ['schedule' => $schedule->id])
+        ->expectsOutputToContain("Dispatching 1 backup(s) for schedule: {$schedule->name}")
         ->expectsOutput('All backup jobs dispatched successfully.')
         ->assertExitCode(0);
 
@@ -36,46 +39,38 @@ test('dispatches backup jobs for daily backups', function () {
         ->and($snapshot->database_name)->toBe('production_db');
 });
 
-test('dispatches backup jobs for weekly backups', function () {
+test('dispatches multiple backup jobs for multiple servers on same schedule', function () {
     Queue::fake();
 
-    $server = DatabaseServer::factory()->create(['database_names' => ['weekly_db']]);
-    $server->backup->update(['recurrence' => 'weekly']);
-
-    $this->artisan('backups:run', ['recurrence' => 'weekly'])
-        ->expectsOutput('Dispatching 1 weekly backup(s)...')
-        ->assertExitCode(0);
-
-    Queue::assertPushed(ProcessBackupJob::class, 1);
-});
-
-test('dispatches multiple backup jobs for multiple servers', function () {
-    Queue::fake();
+    $schedule = BackupSchedule::firstOrCreate(['name' => 'Daily'], ['expression' => '0 2 * * *']);
 
     $server1 = DatabaseServer::factory()->create(['name' => 'Server 1', 'database_names' => ['db1']]);
-    $server1->backup->update(['recurrence' => 'daily']);
+    $server1->backup->update(['backup_schedule_id' => $schedule->id]);
 
     $server2 = DatabaseServer::factory()->create(['name' => 'Server 2', 'database_names' => ['db2']]);
-    $server2->backup->update(['recurrence' => 'daily']);
+    $server2->backup->update(['backup_schedule_id' => $schedule->id]);
 
-    $this->artisan('backups:run', ['recurrence' => 'daily'])
-        ->expectsOutput('Dispatching 2 daily backup(s)...')
+    $this->artisan('backups:run', ['schedule' => $schedule->id])
+        ->expectsOutputToContain('Dispatching 2 backup(s)')
         ->assertExitCode(0);
 
     Queue::assertPushed(ProcessBackupJob::class, 2);
 });
 
-test('only runs backups matching recurrence type', function () {
+test('only runs backups matching the given schedule', function () {
     Queue::fake();
 
+    $dailySchedule = BackupSchedule::firstOrCreate(['name' => 'Daily'], ['expression' => '0 2 * * *']);
+    $weeklySchedule = BackupSchedule::firstOrCreate(['name' => 'Weekly'], ['expression' => '0 3 * * 0']);
+
     $dailyServer = DatabaseServer::factory()->create(['database_names' => ['daily_db']]);
-    $dailyServer->backup->update(['recurrence' => 'daily']);
+    $dailyServer->backup->update(['backup_schedule_id' => $dailySchedule->id]);
 
     $weeklyServer = DatabaseServer::factory()->create(['database_names' => ['weekly_db']]);
-    $weeklyServer->backup->update(['recurrence' => 'weekly']);
+    $weeklyServer->backup->update(['backup_schedule_id' => $weeklySchedule->id]);
 
-    $this->artisan('backups:run', ['recurrence' => 'daily'])
-        ->expectsOutput('Dispatching 1 daily backup(s)...')
+    $this->artisan('backups:run', ['schedule' => $dailySchedule->id])
+        ->expectsOutputToContain('Dispatching 1 backup(s)')
         ->assertExitCode(0);
 
     Queue::assertPushed(ProcessBackupJob::class, 1);
@@ -87,9 +82,9 @@ test('dispatches multiple jobs for server with multiple databases', function () 
     $server = DatabaseServer::factory()->create([
         'database_names' => ['db1', 'db2', 'db3'],
     ]);
-    $server->backup->update(['recurrence' => 'daily']);
+    $schedule = $server->backup->backupSchedule;
 
-    $this->artisan('backups:run', ['recurrence' => 'daily'])
+    $this->artisan('backups:run', ['schedule' => $schedule->id])
         ->expectsOutputToContain('3 databases')
         ->assertExitCode(0);
 
@@ -99,14 +94,16 @@ test('dispatches multiple jobs for server with multiple databases', function () 
 test('skips disabled backups', function () {
     Queue::fake();
 
+    $schedule = BackupSchedule::firstOrCreate(['name' => 'Daily'], ['expression' => '0 2 * * *']);
+
     $enabledServer = DatabaseServer::factory()->create(['name' => 'Enabled Server', 'database_names' => ['db1'], 'backups_enabled' => true]);
-    $enabledServer->backup->update(['recurrence' => 'daily']);
+    $enabledServer->backup->update(['backup_schedule_id' => $schedule->id]);
 
     $disabledServer = DatabaseServer::factory()->create(['name' => 'Disabled Server', 'database_names' => ['db2'], 'backups_enabled' => false]);
-    $disabledServer->backup->update(['recurrence' => 'daily']);
+    $disabledServer->backup->update(['backup_schedule_id' => $schedule->id]);
 
-    $this->artisan('backups:run', ['recurrence' => 'daily'])
-        ->expectsOutput('Dispatching 1 daily backup(s)...')
+    $this->artisan('backups:run', ['schedule' => $schedule->id])
+        ->expectsOutputToContain('Dispatching 1 backup(s)')
         ->assertExitCode(0);
 
     Queue::assertPushed(ProcessBackupJob::class, 1);

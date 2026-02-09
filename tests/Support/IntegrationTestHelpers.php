@@ -5,6 +5,7 @@ namespace Tests\Support;
 use App\Enums\DatabaseType;
 use App\Facades\AppConfig;
 use App\Models\Backup;
+use App\Models\BackupSchedule;
 use App\Models\DatabaseServer;
 use App\Models\Volume;
 use Illuminate\Support\Facades\ParallelTesting;
@@ -104,10 +105,15 @@ class IntegrationTestHelpers
      */
     public static function createBackup(DatabaseServer $server, Volume $volume): Backup
     {
+        $schedule = BackupSchedule::firstOrCreate(
+            ['name' => 'Daily'],
+            ['expression' => '0 2 * * *'],
+        );
+
         return Backup::create([
             'database_server_id' => $server->id,
             'volume_id' => $volume->id,
-            'recurrence' => 'manual',
+            'backup_schedule_id' => $schedule->id,
         ]);
     }
 

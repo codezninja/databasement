@@ -283,9 +283,11 @@
                         />
 
                         <x-select
-                            wire:model="form.recurrence"
-                            label="{{ __('Backup Frequency') }}"
-                            :options="$form->getRecurrenceOptions()"
+                            wire:model="form.backup_schedule_id"
+                            label="{{ __('Backup Schedule') }}"
+                            :options="$form->getScheduleOptions()"
+                            placeholder="{{ __('Select a schedule') }}"
+                            placeholder-value=""
                             required
                         />
                     </div>
