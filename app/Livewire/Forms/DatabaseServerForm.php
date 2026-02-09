@@ -12,6 +12,7 @@ use App\Models\DatabaseServerSshConfig;
 use App\Rules\SafePath;
 use App\Services\Backup\DatabaseListService;
 use App\Services\SshTunnelService;
+use App\Support\Formatters;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Livewire\Form;
@@ -368,7 +369,7 @@ class DatabaseServerForm extends Form
             ->get()
             ->map(fn (BackupSchedule $schedule) => [
                 'id' => $schedule->id,
-                'name' => $schedule->name,
+                'name' => $schedule->name.' — '.$schedule->expression.' ('.Formatters::cronTranslation($schedule->expression).')',
             ])
             ->toArray();
     }

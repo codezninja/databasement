@@ -58,7 +58,7 @@
                                 <x-icon name="o-calendar-days" class="w-3 h-3" />
                                 {{ $schedule->expression }}
                             </span>
-                            <span class="text-sm text-base-content/60">{{ $this->translateCron($schedule->expression) }}</span>
+                            <span class="text-sm text-base-content/60">{{ \App\Support\Formatters::cronTranslation($schedule->expression) }}</span>
                             @if ($this->isAdmin)
                                 <div class="flex items-center gap-0.5 shrink-0 ml-auto">
                                     <x-button icon="o-pencil-square" class="btn-ghost btn-sm" wire:click="openScheduleModal('{{ $schedule->id }}')" tooltip-left="{{ __('Edit') }}" />
@@ -139,7 +139,7 @@
                     <x-config-row label="{{ __('Cleanup Cron') }}" description="{{ __('Cron expression that controls when old snapshots are cleaned up.') }}">
                         <div>
                             <x-input wire:model.blur="form.cleanup_cron" :disabled="!$this->isAdmin" />
-                            <div class="fieldset-label mt-1 text-xs">{{ $this->translateCron($form->cleanup_cron) }}</div>
+                            <div class="fieldset-label mt-1 text-xs">{{ \App\Support\Formatters::cronTranslation($form->cleanup_cron) }}</div>
                         </div>
                     </x-config-row>
 
@@ -151,7 +151,7 @@
                         <x-config-row label="{{ __('Verify Files Cron') }}" description="{{ __('Cron expression that controls when snapshot file verification runs.') }}">
                             <div>
                                 <x-input wire:model.blur="form.verify_files_cron" :disabled="!$this->isAdmin" />
-                                <div class="fieldset-label mt-1 text-xs">{{ $this->translateCron($form->verify_files_cron) }}</div>
+                                <div class="fieldset-label mt-1 text-xs">{{ \App\Support\Formatters::cronTranslation($form->verify_files_cron) }}</div>
                             </div>
                         </x-config-row>
                     @endif
@@ -392,7 +392,7 @@
                     required
                 />
                 @if ($form->schedule_expression)
-                    <div class="fieldset-label mt-1 text-xs">{{ $this->translateCron($form->schedule_expression) }}</div>
+                    <div class="fieldset-label mt-1 text-xs">{{ \App\Support\Formatters::cronTranslation($form->schedule_expression) }}</div>
                 @endif
             </div>
         </div>

@@ -12,7 +12,6 @@ use Illuminate\Support\Facades\Log;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Title;
 use Livewire\Component;
-use Lorisleiva\CronTranslator\CronTranslator;
 use Mary\Traits\Toast;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Process\Process;
@@ -247,15 +246,6 @@ class Index extends Component
             $this->success(__('Test notification sent to: :channels', ['channels' => $channelNames]), position: 'toast-bottom');
         } catch (\Throwable $e) {
             $this->error(__('Failed to send test notification: :message', ['message' => $e->getMessage()]), position: 'toast-bottom');
-        }
-    }
-
-    public function translateCron(string $expression): string
-    {
-        try {
-            return CronTranslator::translate($expression);
-        } catch (\Throwable) {
-            return '';
         }
     }
 
