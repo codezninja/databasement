@@ -41,42 +41,46 @@
         <x-card title="{{ __('Backup Schedules') }}" subtitle="{{ __('Define cron schedules that database servers can use for automated backups.') }}" shadow>
             <div class="divide-y divide-base-200/80">
                 @foreach ($backupSchedules as $schedule)
-                    <div class="flex items-center justify-between py-3 px-1" wire:key="schedule-{{ $schedule->id }}">
-                        <div>
-                            <div class="font-medium">{{ $schedule->name }}</div>
-                            <div class="text-sm text-base-content/70">
-                                <code class="text-xs bg-base-200 px-1.5 py-0.5 rounded">{{ $schedule->expression }}</code>
-                                <span class="ml-2">{{ $this->translateCron($schedule->expression) }}</span>
-                            </div>
-                            @if ($schedule->backups_count > 0)
-                                <div class="text-xs text-base-content/50 mt-1">
-                                    {{ trans_choice(':count server|:count servers', $schedule->backups_count) }}
+                    <x-config-row wire:key="schedule-{{ $schedule->id }}">
+                        <x-slot:label>
+                            <span class="inline-flex flex-wrap items-center gap-2">
+                                {{ $schedule->name }}
+                                @if ($schedule->backups_count > 0)
+                                    <span class="badge badge-outline badge-info">
+                                        <x-icon name="o-server-stack" class="w-3 h-3" />
+                                        {{ trans_choice(':count server|:count servers', $schedule->backups_count) }}
+                                    </span>
+                                @endif
+                            </span>
+                        </x-slot:label>
+                        <div class="flex items-center gap-3">
+                            <span class="badge badge-neutral">
+                                <x-icon name="o-calendar-days" class="w-3 h-3" />
+                                {{ $schedule->expression }}
+                            </span>
+                            <span class="text-sm text-base-content/60">{{ $this->translateCron($schedule->expression) }}</span>
+                            @if ($this->isAdmin)
+                                <div class="flex items-center gap-0.5 shrink-0 ml-auto">
+                                    <x-button icon="o-pencil-square" class="btn-ghost btn-sm" wire:click="openScheduleModal('{{ $schedule->id }}')" tooltip-left="{{ __('Edit') }}" />
+                                    @if ($schedule->backups_count > 0)
+                                        <x-popover>
+                                            <x-slot:trigger>
+                                                <x-button icon="o-trash" class="btn-ghost btn-sm opacity-40" disabled />
+                                            </x-slot:trigger>
+                                            <x-slot:content>{{ __('In use by servers') }}</x-slot:content>
+                                        </x-popover>
+                                    @else
+                                        <x-button icon="o-trash" class="btn-ghost btn-sm text-error hover:bg-error/10" wire:click="confirmDeleteSchedule('{{ $schedule->id }}')" tooltip-left="{{ __('Delete') }}" />
+                                    @endif
                                 </div>
                             @endif
                         </div>
-                        @if ($this->isAdmin)
-                            <div class="flex items-center gap-1">
-                                <x-button
-                                    icon="o-pencil-square"
-                                    class="btn-ghost btn-sm"
-                                    wire:click="openScheduleModal('{{ $schedule->id }}')"
-                                    tooltip-left="{{ __('Edit') }}"
-                                />
-                                <x-button
-                                    icon="o-trash"
-                                    class="btn-ghost btn-sm text-error"
-                                    wire:click="confirmDeleteSchedule('{{ $schedule->id }}')"
-                                    :disabled="$schedule->backups_count > 0"
-                                    tooltip-left="{{ $schedule->backups_count > 0 ? __('In use by servers') : __('Delete') }}"
-                                />
-                            </div>
-                        @endif
-                    </div>
+                    </x-config-row>
                 @endforeach
             </div>
 
             @if ($this->isAdmin)
-                <div class="flex items-center justify-end border-t border-base-200/60 pt-4 mt-2">
+                <div class="flex items-center justify-end border-t border-base-200/60 pt-4 mt-4">
                     <x-button
                         label="{{ __('Add Schedule') }}"
                         icon="o-plus"
